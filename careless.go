@@ -13,7 +13,10 @@ const (
 	SLEEP = time.Minute * 5
 )
 
+var checked map[string]struct{}
+
 func main () {
+	checked = make(map[string]struct{})
 	var subreddits = [...]string {"askreddit", "4chan"} // subreddits to check
 
 	// login to reddit
@@ -46,15 +49,20 @@ func main () {
 		}
 
 		// sleep for a while
-		fmt.Println("Sleeping for ", SLEEP, " mins")
+		fmt.Println("Sleeping for ", SLEEP)
 		time.Sleep(SLEEP)
 	}
 }
 
 func checkComments (comments []*geddit.Comment) {
 	for _, c := range comments {
-		if strings.Contains(c.Body, TRIGGER) {
-			fmt.Println("Found an offender: ", c.LinkID)
+		// check if we have already checked this comment
+		_, ok := checked[c.LinkID]
+		if !ok {
+			if strings.Contains(c.Body, TRIGGER) {
+				fmt.Println("Found an offender: ", c.LinkID)
+			}
+			checked[c.LinkID] = struct{}{}
 		}
 	}
 }
