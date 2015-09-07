@@ -10,7 +10,7 @@ import (
 
 const (
 	TRIGGER = "I could care less"
-	SLEEP = time.Minute * 5
+	SLEEP_TIME = time.Second * 5
 )
 
 var checked map[string]struct{}
@@ -31,38 +31,41 @@ func main () {
 		Limit: 100,
 	}
 
-	for _, sub := range subreddits {
-		submissions, err := r.SubredditSubmissions(sub, geddit.NewSubmissions, subOpts)
-		if err != nil {
-			fmt.Fprintf(os.Stderr, "Failed to get new submissions for %s\n", sub)
-		} else {
-			for _, s := range submissions {
-				fmt.Println("Checking comments in ", s.Permalink)
-				// get submission comments
-				comments, err := r.Comments(s)
-				if err != nil {
-					fmt.Fprintf(os.Stderr, "Failed to get submission comments: %s\n", err.Error())
-				} else {
-					checkComments(comments)
+	for {
+		for _, sub := range subreddits {
+			submissions, err := r.SubredditSubmissions(sub, geddit.NewSubmissions, subOpts)
+			if err != nil {
+				fmt.Fprintf(os.Stderr, "Failed to get new submissions for %s\n", sub)
+			} else {
+				for _, s := range submissions {
+					fmt.Println("Checking comments in ", s.Permalink)
+					// get submission comments
+					comments, err := r.Comments(s)
+					if err != nil {
+						fmt.Fprintf(os.Stderr, "Failed to get submission comments: %s\n", err.Error())
+					} else {
+						go checkComments(comments)
+					}
 				}
 			}
 		}
-
 		// sleep for a while
-		fmt.Println("Sleeping for ", SLEEP)
-		time.Sleep(SLEEP)
+		fmt.Println("Sleeping for", SLEEP_TIME)
+		time.Sleep(SLEEP_TIME)
 	}
 }
 
 func checkComments (comments []*geddit.Comment) {
 	for _, c := range comments {
 		// check if we have already checked this comment
-		_, ok := checked[c.LinkID]
+		_, ok := checked[c.FullID]
 		if !ok {
 			if strings.Contains(c.Body, TRIGGER) {
-				fmt.Println("Found an offender: ", c.LinkID)
+				fmt.Println("Found an offender: ", c.FullID)
 			}
-			checked[c.LinkID] = struct{}{}
+			checked[c.FullID] = struct{}{}
+		} else {
+			fmt.Println("Skipping comment already scanned: ", c.FullID)
 		}
 	}
 }
