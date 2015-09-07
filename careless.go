@@ -3,7 +3,14 @@ package main
 import (
 	"fmt"
 	"os"
+	"strings"
+	"time"
 	"github.com/jzelinskie/geddit"
+)
+
+const (
+	TRIGGER = "I could care less"
+	SLEEP = time.Minute * 5
 )
 
 func main () {
@@ -27,8 +34,27 @@ func main () {
 			fmt.Fprintf(os.Stderr, "Failed to get new submissions for %s\n", sub)
 		} else {
 			for _, s := range submissions {
-				fmt.Printf("Title: %s\nAuthor: %s\n\n", s.Title, s.Author)
+				fmt.Println("Checking comments in ", s.Permalink)
+				// get submission comments
+				comments, err := r.Comments(s)
+				if err != nil {
+					fmt.Fprintf(os.Stderr, "Failed to get submission comments: %s\n", err.Error())
+				} else {
+					checkComments(comments)
+				}
 			}
+		}
+
+		// sleep for a while
+		fmt.Println("Sleeping for ", SLEEP, " mins")
+		time.Sleep(SLEEP)
+	}
+}
+
+func checkComments (comments []*geddit.Comment) {
+	for _, c := range comments {
+		if strings.Contains(c.Body, TRIGGER) {
+			fmt.Println("Found an offender: ", c.LinkID)
 		}
 	}
 }
